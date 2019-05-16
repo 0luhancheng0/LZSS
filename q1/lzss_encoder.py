@@ -1,6 +1,7 @@
 import sys
 import math
 from sys import byteorder, getsizeof as gso
+BYTEORDER = 'big'
 class node:
     def __init__(self, value, frequnecy, left=None, right=None):
         self.value = value
@@ -339,14 +340,14 @@ def writefile_bin(data, filepath='./output_lzss_encoder.bin'):
         # add a preceding '1' to presert preceding 0s
 
         data = int('1' + data, 2)
-        data_bin = data.to_bytes(math.ceil(data.bit_length()/8), byteorder)
+        data_bin = data.to_bytes(math.ceil(data.bit_length()/8), BYTEORDER)
         # data = int(data).to_bytes(byteorder)
     with open(filepath, 'wb') as f:
         f.write(data_bin)
 def readfile_bin(filepath='./output_lzss_encoder.bin'):
     with open(filepath, 'rb') as f:
         data = f.read()
-    data = bin(int.from_bytes(data, byteorder))[3:]
+    data = bin(int.from_bytes(data, BYTEORDER))[3:]
     return data
 
     
@@ -354,10 +355,10 @@ def readfile_bin(filepath='./output_lzss_encoder.bin'):
 if __name__ == "__main__":
     # test_LZSS()
     test_data = readfile_txt('./q1/test.txt')
-    # codeword = encode(test_data, 6,4)
+    codeword = encode(test_data, 6,4)
     print(generate_header(test_data))
     # print(codeword)
-    # writefile_bin(codeword)
+    writefile_bin(codeword)
     # data = readfile_bin()
     # print(data)
 
