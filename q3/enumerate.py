@@ -1,130 +1,51 @@
 import sys
-def node_generator():
-    while True:
-        yield Node()
 class Node:
-    def __init__(self):
-        self.left = None 
-        self.right = None
-        self.active = False
-    def get_left(self):
-        if self.left is None:
-            self.left = Node()
-        return self.left
-    def get_right(self):
-        if self.right is None:
-            self.right = Node()
-        return self.right
+    def __init__(self, left=None, right=None):
+        self.left = left
+        self.right = right
 
-
+class Binary_tree:
+    def __init__(self, left_subtree=None, right_subtree=None):
+        self.root = Node(left=left_subtree, right=right_subtree)
+        return
+    def preorder_traverse(self):
+        return self._preorder_traverse_aux(self.root)
+    def _preorder_traverse_aux(self, current):
+        if current.left is None and current.right is None:
+            return '1'
+        return '0' + self._preorder_traverse_aux(current.left) + self._preorder_traverse_aux(current.right)
 def flatten_list(lst):
     result = []
-    for i in lst:
-        if type(i) is list:
-            for j in i:
-                result.append(j)
-        else:
-            result.append(i)
+    for sublist in lst:
+        for item in sublist:
+            result.append(item)
     return result
+def get_trees_in_level(n):
+    if n == 0:
+        return [Binary_tree()]
+    else:
+        trees = []
+        level_pairs = list(zip(reversed(range(n)), range(n)))
+        tree_list = map(lambda x : (get_trees_in_level(x[0]), get_trees_in_level(x[1])), level_pairs)
+        for tp in tree_list:
+            for lt in tp[0]:
+                for rt in tp[1]:
+                    trees.append(Binary_tree(left_subtree=lt.root, right_subtree=rt.root))
+        trees = sorted(trees, key=lambda x : int(x.preorder_traverse(), 2))
+        return trees
 
-class Tree:
-    def __init__(self):
-        self.root = Node()
-        return 
-    def enum_level(self, N):
-        self.ans = []
-        if N == 0:
-            self.ans.append('1')
-        else:
-            # N-=1
-            # self.last_activated = None
-            self.__init__()
-            self.activated_num = 0
-            # self.current_depth = 0
-            self.start_enum = False
+def get_trees_to_level(n):
+    trees = []
+    for i in range(n+1):
+        trees.extend(get_trees_in_level(i))
+    return trees
 
-            self.last_activation_gen = iter(self.postorder_traverse(self.root, 1, N))
-            self.enum_internal(self.root, N , 1)
-        return self.ans
-    # def postorder_traverse(self, current, current_depth, N):
-    #     # print(current_depth)
-    #     if current_depth == N:
-    #         yield current
-    #         return
-    #     self.postorder_traverse(current.get_left(), current_depth+1, N)
-    #     self.postorder_traverse(current.get_right(), current_depth+1, N)
-    #     yield current
-    def postorder_traverse(self, current, current_depth, N):
-        # print(current_depth)
-        if current_depth == N:
-            return [current]
-        left = self.postorder_traverse(current.get_left(), current_depth+1, N)
-        right = self.postorder_traverse(current.get_right(), current_depth+1, N)
-        return flatten_list([left, right, current])
+def write_trees_to_file(trees, filepath='./output_enumerate.txt'):
+    with open(filepath, 'w') as f:
+        for i, t in enumerate(trees, 1):
+            f.writelines(str(i) + '\t' + t.preorder_traverse()+'\n')
 
-    # def postorder_traverse(self, N):
-    #     current = self.root
-    #     depth = 1
-    #     while depth < N:
-    #         current = current.get_left()
-    #         depth += 1
-    #     yield current
-
-    # def _postorder_aux()
-    def enum_internal(self, current, N, current_depth):
-        # if len(node_path) == N:
-        #     print(node_path)
-        #     return 
-        # print(activated_num)
-        
-        if self.activated_num == N-1:
-            if not self.start_enum:
-                current.active = True
-                # self.last_activated = current
-                self.start_enum = True
-                self.ans.append(self.traverse_activation(self.root))
-                print(self.traverse_activation(self.root))
-                return 
-            else:
-                # self.last_activated.active = False
-                last_activation = next(self.last_activation_gen)
-                last_activation.active = False
-                current.active = True
-                # self.last_activated = current
-                self.ans.append(self.traverse_activation(self.root))
-                print(self.traverse_activation(self.root))
-                if current_depth == N:
-                    return 
-                else:
-                    self.enum_internal(current.get_left(), N, current_depth+1)
-                    self.enum_internal(current.get_right(), N, current_depth+1)
-                    return
-        current.active = True
-        # self.last_activated = current
-        self.activated_num+=1
-        self.enum_internal(current.get_left(), N, current_depth+1)
-        self.enum_internal(current.get_right(), N, current_depth+1)
-        return 
-    def traverse_activation(self, current):
-        if not current.active:
-            return '1'
-        return '0' + self.traverse_activation(current.get_left()) + self.traverse_activation(current.get_right())
-def factorial(N):
-    if N == 0:
-        return 1
-    return factorial(N-1)*N
-def get_tree_num(N):
-    return int(factorial(2*N)/(factorial(N+1)*factorial(N)))
 if __name__ == "__main__":
-    # assert len(sys.argv) == 2
-    # N = sys.argv[1]
-    N = 4
-    bitree = Tree()
-    ans = [] 
-    for i in range(N+1):
-        ans.append(bitree.enum_level(i))
-    ans = flatten_list(ans)
-    with open('output_enumerate.txt', 'w') as f:
-        for i in range(len(ans)):
-            f.write(str(i+1) + '\t' + ans[i] + '\n')
-
+    to_level = int(sys.argv[1]) 
+    write_trees_to_file(get_trees_to_level(to_level))
+    
