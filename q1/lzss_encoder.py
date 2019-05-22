@@ -338,18 +338,33 @@ def test_LZSS(stringLength=1000, window_size_range=range(1,10),buffer_size_range
 def encode(data, window_size, buffer_size, write_to_file_path=OUTPUT_FILE):
     with open(OUTPUT_FILE, 'ab') as fobject:
         header = generate_header(data)
-        fobject.writelines(bytearray(int(header, 2)))
+        # print(header)
+        # print(int(header))
+        # fobject.writelines(bytearray(int(header, 2)))
+
         LZSS_encoder = LZSS(window_size=window_size,
                             buffer_size=buffer_size, fobject=fobject)
         information = LZSS_encoder.encode(data)
+        # for i in range(len())
+        # print(header+information)
         return header + information
 
 
 def writefile_bin(data, filepath=OUTPUT_FILE):
-    data_bin = to_bin(data)
-    print(len(data_bin))
     with open(filepath, 'wb') as f:
+        data_bin = to_bin(data)
+        print(len(data_bin))
         f.write(data_bin)
+        # f.writeline(data_bin)
+    # with open(filepath, 'ab') as f:
+    #     for i in range(len(data)):
+    #         next_byte
+def byte_gen(data):
+    while len(data) != '':
+        next_byte = data[:16]
+        data = data[16:]
+        yield int(next_byte,2).to_bytes(4,'big')
+
 def to_bin(str_data):
     # pad a 1 at the front
     str_data = '1' + str_data
@@ -367,7 +382,7 @@ def from_bin(byte_data):
 def readfile_bin(filepath=OUTPUT_FILE):
     with open(filepath, 'rb') as f:
         data_bytes = f.read()
-    print(len(data_bytes))
+    # print(len(data_bytes))
     return from_bin(data_bytes)
 
 
@@ -379,7 +394,7 @@ def test_all():
     test_num=1
     for i in range(test_num):
         rand_str = ''.join(choices(letters, k=stringLength))
-        print(str(len(rand_str)) + ' uncompressed size')
+        # print(str(len(rand_str)) + ' uncompressed size')
         codeword_bin = encode(rand_str, 6,4)
         writefile_bin(codeword_bin)
         read_bin = readfile_bin()
@@ -392,6 +407,7 @@ if __name__ == "__main__":
     filetext = readfile_txt(filepath=input_filepath)
     codeword_bin = encode(filetext, window_size, buffer_size,
                           write_to_file_path=input_filepath)
+    next_byte = byte_gen(codeword_bin)
     writefile_bin(codeword_bin)
     read_bin = readfile_bin()
     decoded = decode(read_bin)
