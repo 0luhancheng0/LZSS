@@ -96,7 +96,8 @@ def get_freq(charlist):
     freq_dict = {}
     for c in charlist:
         freq_dict[c] = freq_dict.get(c, 0) + 1
-    return sorted(freq_dict.items(), key=lambda x: x[1])
+    freq_list = sorted(freq_dict.items(), key=lambda x: x[1])
+    return freq_list
 
 class elias:
     def __init__(self):
@@ -155,7 +156,7 @@ def read_cmdarg():
     return sys.argv[1], sys.argv[2], sys.argv[3]
 
 def readfile_txt(filepath):
-    with open(filepath, 'r') as fobject:
+    with open(filepath, 'r',  encoding='utf-8-sig') as fobject:
         content = fobject.read()
     return content
 
@@ -296,7 +297,7 @@ def decode_header(codeword):
     elias_decoder = elias()
     char_nums, rest = elias_decoder.decode(codeword)
     huffman_dict = {}
-    for _ in range(char_nums):
+    for i in range(char_nums):
         char_ascii = chr(int(rest[:8], 2))
         rest = rest[8:]
         huffman_code_len, rest = elias_decoder.decode(rest)
@@ -400,17 +401,50 @@ def test_all():
         read_bin = readfile_bin()
         assert decode(read_bin) == rand_str
 
+
+def binstr_to_bytearray(data):
+    int_array = []
+    for i in range(0, len(data), 8):
+        next_byte = data[i:i+8]
+        next_byte = int(next_byte, 2)
+        # if len(data[i:i+8]) != 8:
+        #     next_byte += int((8-len(data[i:i+8]))*'0'+data[i:i+8],2)
+        int_array.append(next_byte)
+    return bytearray(int_array)
+
+
+def bytearray_to_binstr(data):
+    result_binstr = ''.join(
+        list(map(lambda x: (8-len(bin(x)[2:]))*'0'+bin(x)[2:], data[:-1])))
+
+    last_byte = bin(data[-1])[2:]
+
+    result_binstr += last_byte
+    return result_binstr
+
 if __name__ == "__main__":
     input_filepath = sys.argv[1]
     window_size = int(sys.argv[2])
     buffer_size = int(sys.argv[3])
+    # input_filepath = './book.txt'
+    # window_size = 4
+    # buffer_size = 6
     filetext = readfile_txt(filepath=input_filepath)
+    # filetext = filetext[:1000]
     codeword_bin = encode(filetext, window_size, buffer_size,
                           write_to_file_path=input_filepath)
-    next_byte = byte_gen(codeword_bin)
-    writefile_bin(codeword_bin)
-    read_bin = readfile_bin()
-    decoded = decode(read_bin)
+    # next_byte = byte_gen(codeword_bin)
+
+    with open(OUTPUT_FILE, 'wb') as fout:
+        codeword_bytes = binstr_to_bytearray(codeword_bin)
+        fout.write(codeword_bytes)
+    # with open(OUTPUT_FILE, 'rb') as fin:
+    #     read_code = fin.read()
+    #     read_codeword_binstr = bytearray_to_binstr(read_code)
+    # decoded = decode(read_codeword_binstr)
+    # writefile_bin(codeword_bin)
+    # read_bin = readfile_bin()
+    # decoded = decode(read_bin)
 
     # test_all()
 
