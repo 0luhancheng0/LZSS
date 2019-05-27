@@ -1,6 +1,5 @@
 import sys
 import math
-from sys import byteorder, getsizeof as gso
 BYTEORDER = 'big'
 OUTPUT_FILE = './output_lzss_encoder.bin'
 class node:
@@ -104,7 +103,6 @@ class elias:
         pass
     
     def encode(self, N):
-        # map the encoding to the int before
         N += 1
         if N < 1:
             raise Exception('cannot encode negatives')
@@ -138,7 +136,6 @@ class elias:
 
         plaintext = int(codeword[pos:pos+readlen], 2) - 1
         return plaintext, codeword[pos+readlen:]
-        # return 
 
     # this function is just for testing, will not be used in main routine
     def decode_all(self, codeword):
@@ -242,18 +239,15 @@ class LZSS:
     def decode(codeword, huffman_encode_dict, field_num):
         elias_decoder = elias()
         huffman_decoder = huffman(huffman_encode_dict)
-        
         tuple_list = []
         rest = codeword
         while field_num != 0:
             fst_bit = int(rest[0])
             rest = rest[1:]
-            # fst_bit, rest = elias_decoder.decode(rest)
             if fst_bit == 1:
                 plainchar, rest = huffman_decoder.decode(rest)
                 tuple_list.append((fst_bit, plainchar))
             elif fst_bit == 0:
-                # print(9)
                 offset, rest = elias_decoder.decode(rest)
                 length, rest = elias_decoder.decode(rest)
                 tuple_list.append((fst_bit, offset, length))
@@ -285,7 +279,6 @@ def generate_header(data):
         # concatenate the huffman codeword assigned to that unique char
     elias_encoder = elias()
     huffman_encoder = huffman(data)
-    # print(huffman_encoder.code_dict)
     header = ''
     header += elias_encoder.encode(len(huffman_encoder.code_dict))
     for plainchar, encoding in huffman_encoder.code_dict.items():
@@ -304,14 +297,12 @@ def decode_header(codeword):
         huff_encoding = rest[:huffman_code_len]
         rest = rest[huffman_code_len:]
         huffman_dict[char_ascii] = huff_encoding
-    # print(huffman_dict)
     return huffman_dict, rest
 
 def decode_info(codeword, huffman_encode_dict):
     elias_decoder = elias()
     tuple_num, rest = elias_decoder.decode(codeword)
     plaintext = LZSS.decode(rest, huffman_encode_dict, tuple_num)
-    # assert tuple_num == encoded_field_num
     return plaintext
         
 def decode(codeword):
@@ -351,55 +342,20 @@ def encode(data, window_size, buffer_size, write_to_file_path=OUTPUT_FILE):
         return header + information
 
 
-def writefile_bin(data, filepath=OUTPUT_FILE):
-    with open(filepath, 'wb') as f:
-        data_bin = to_bin(data)
-        print(len(data_bin))
-        f.write(data_bin)
-        # f.writeline(data_bin)
-    # with open(filepath, 'ab') as f:
-    #     for i in range(len(data)):
-    #         next_byte
-def byte_gen(data):
-    while len(data) != '':
-        next_byte = data[:16]
-        data = data[16:]
-        yield int(next_byte,2).to_bytes(4,'big')
 
-def to_bin(str_data):
-    # pad a 1 at the front
-    str_data = '1' + str_data
-    int_data = int(str_data,2)
-    data_bin=int_data.to_bytes(math.ceil(int_data.bit_length()/8), BYTEORDER)
-    # print(str(math.ceil(int_data.bit_length()/8))+' bytes allocated')
-    return data_bin
-def from_bin(byte_data):
-    int_data = int.from_bytes(byte_data, BYTEORDER)
-    str_data = bin(int_data)[2:]
-    str_data = str_data[1:]
-
-    return str_data
-
-def readfile_bin(filepath=OUTPUT_FILE):
-    with open(filepath, 'rb') as f:
-        data_bytes = f.read()
-    # print(len(data_bytes))
-    return from_bin(data_bytes)
-
-
-def test_all():
-    from random import choices
-    import string
-    letters = string.printable
-    stringLength=2120
-    test_num=1
-    for i in range(test_num):
-        rand_str = ''.join(choices(letters, k=stringLength))
-        # print(str(len(rand_str)) + ' uncompressed size')
-        codeword_bin = encode(rand_str, 6,4)
-        writefile_bin(codeword_bin)
-        read_bin = readfile_bin()
-        assert decode(read_bin) == rand_str
+# def test_all():
+#     from random import choices
+#     import string
+#     letters = string.printable
+#     stringLength=2120
+#     test_num=1
+#     for i in range(test_num):
+#         rand_str = ''.join(choices(letters, k=stringLength))
+#         # print(str(len(rand_str)) + ' uncompressed size')
+#         codeword_bin = encode(rand_str, 6,4)
+#         writefile_bin(codeword_bin)
+#         read_bin = readfile_bin()
+#         assert decode(read_bin) == rand_str
 
 
 def binstr_to_bytearray(data):
@@ -407,8 +363,7 @@ def binstr_to_bytearray(data):
     for i in range(0, len(data), 8):
         next_byte = data[i:i+8]
         next_byte = int(next_byte, 2)
-        # if len(data[i:i+8]) != 8:
-        #     next_byte += int((8-len(data[i:i+8]))*'0'+data[i:i+8],2)
+
         int_array.append(next_byte)
     return bytearray(int_array)
 
@@ -422,31 +377,31 @@ def bytearray_to_binstr(data):
     result_binstr += last_byte
     return result_binstr
 
+
+def writefile_bin(codeword_bin, filepath=OUTPUT_FILE):
+    with open(filepath, 'wb') as fout:
+        codeword_bytes = binstr_to_bytearray(codeword_bin)
+        fout.write(codeword_bytes)
+
+def readfile_bin(filepath):
+    with open(filepath, 'rb') as fin:
+        read_code = fin.read()
+        read_codeword_binstr = bytearray_to_binstr(read_code)
+    return read_codeword_binstr
 if __name__ == "__main__":
     input_filepath = sys.argv[1]
     window_size = int(sys.argv[2])
     buffer_size = int(sys.argv[3])
-    # input_filepath = './book.txt'
-    # window_size = 4
-    # buffer_size = 6
     filetext = readfile_txt(filepath=input_filepath)
-    # filetext = filetext[:1000]
-    codeword_bin = encode(filetext, window_size, buffer_size,
+
+    codeword_binstr = encode(filetext, window_size, buffer_size,
                           write_to_file_path=input_filepath)
-    # next_byte = byte_gen(codeword_bin)
 
-    with open(OUTPUT_FILE, 'wb') as fout:
-        codeword_bytes = binstr_to_bytearray(codeword_bin)
-        fout.write(codeword_bytes)
-    # with open(OUTPUT_FILE, 'rb') as fin:
-    #     read_code = fin.read()
-    #     read_codeword_binstr = bytearray_to_binstr(read_code)
+    writefile_bin(codeword_binstr)
+
+    # read_codeword_binstr = readfile_bin(OUTPUT_FILE)
     # decoded = decode(read_codeword_binstr)
-    # writefile_bin(codeword_bin)
-    # read_bin = readfile_bin()
-    # decoded = decode(read_bin)
 
-    # test_all()
 
 
 

@@ -1,8 +1,7 @@
 import sys
 import math
-from sys import byteorder, getsizeof as gso
+
 BYTEORDER = 'big'
-OUTPUT_FILE = './output_lzss_encoder.bin'
 
 
 class node:
@@ -101,7 +100,8 @@ def get_freq(charlist):
     freq_dict = {}
     for c in charlist:
         freq_dict[c] = freq_dict.get(c, 0) + 1
-    return sorted(freq_dict.items(), key=lambda x: x[1])
+    freq_list = sorted(freq_dict.items(), key=lambda x: x[1])
+    return freq_list
 
 
 class elias:
@@ -109,7 +109,6 @@ class elias:
         pass
 
     def encode(self, N):
-        # map the encoding to the int before
         N += 1
         if N < 1:
             raise Exception('cannot encode negatives')
@@ -145,7 +144,6 @@ class elias:
 
         plaintext = int(codeword[pos:pos+readlen], 2) - 1
         return plaintext, codeword[pos+readlen:]
-        # return
 
     # this function is just for testing, will not be used in main routine
     def decode_all(self, codeword):
@@ -164,7 +162,7 @@ def read_cmdarg():
 
 
 def readfile_txt(filepath):
-    with open(filepath, 'r') as fobject:
+    with open(filepath, 'r',  encoding='utf-8-sig') as fobject:
         content = fobject.read()
     return content
 
@@ -194,17 +192,21 @@ def test_huffman(stringLength=10000):
 
 
 class LZSS:
-    def __init__(self, window_size=None, buffer_size=None):
+    def __init__(self, window_size=None, buffer_size=None, fobject=None):
         self.window_size = window_size
         self.buffer_size = buffer_size
         self.huffman_encoder = None
+        self.fobject = fobject
         self.elias_encoder = elias()
 
     def tuple_encode(self, t):
         if t[0] == 1:
-            return '1'+self.huffman_encoder.encode(t[1])
+            tuple_code = '1'+self.huffman_encoder.encode(t[1])
+            return tuple_code
         elif t[0] == 0:
-            return '0'+self.elias_encoder.encode(t[1])+self.elias_encoder.encode(t[2])
+            tuple_code = '0' + \
+                self.elias_encoder.encode(t[1])+self.elias_encoder.encode(t[2])
+            return tuple_code
         else:
             assert False
 
@@ -252,18 +254,15 @@ class LZSS:
     def decode(codeword, huffman_encode_dict, field_num):
         elias_decoder = elias()
         huffman_decoder = huffman(huffman_encode_dict)
-
         tuple_list = []
         rest = codeword
         while field_num != 0:
             fst_bit = int(rest[0])
             rest = rest[1:]
-            # fst_bit, rest = elias_decoder.decode(rest)
             if fst_bit == 1:
                 plainchar, rest = huffman_decoder.decode(rest)
                 tuple_list.append((fst_bit, plainchar))
             elif fst_bit == 0:
-                # print(9)
                 offset, rest = elias_decoder.decode(rest)
                 length, rest = elias_decoder.decode(rest)
                 tuple_list.append((fst_bit, offset, length))
@@ -296,7 +295,6 @@ def generate_header(data):
         # concatenate the huffman codeword assigned to that unique char
     elias_encoder = elias()
     huffman_encoder = huffman(data)
-    # print(huffman_encoder.code_dict)
     header = ''
     header += elias_encoder.encode(len(huffman_encoder.code_dict))
     for plainchar, encoding in huffman_encoder.code_dict.items():
@@ -311,14 +309,13 @@ def decode_header(codeword):
     elias_decoder = elias()
     char_nums, rest = elias_decoder.decode(codeword)
     huffman_dict = {}
-    for _ in range(char_nums):
+    for i in range(char_nums):
         char_ascii = chr(int(rest[:8], 2))
         rest = rest[8:]
         huffman_code_len, rest = elias_decoder.decode(rest)
         huff_encoding = rest[:huffman_code_len]
         rest = rest[huffman_code_len:]
         huffman_dict[char_ascii] = huff_encoding
-    # print(huffman_dict)
     return huffman_dict, rest
 
 
@@ -326,7 +323,6 @@ def decode_info(codeword, huffman_encode_dict):
     elias_decoder = elias()
     tuple_num, rest = elias_decoder.decode(codeword)
     plaintext = LZSS.decode(rest, huffman_encode_dict, tuple_num)
-    # assert tuple_num == encoded_field_num
     return plaintext
 
 
@@ -353,67 +349,57 @@ def test_LZSS(stringLength=1000, window_size_range=range(1, 10), buffer_size_ran
         assert plaintext == rand_str
 
 
-def encode(data, window_size, buffer_size):
-    header = generate_header(data)
-    LZSS_encoder = LZSS(window_size=window_size, buffer_size=buffer_size)
-    information = LZSS_encoder.encode(data)
-    return header + information
 
 
-def writefile_bin(data, filepath=OUTPUT_FILE):
-    data_bin = to_bin(data)
-    print(len(data_bin))
-    with open(filepath, 'wb') as f:
-        f.write(data_bin)
+# def test_all():
+#     from random import choices
+#     import string
+#     letters = string.printable
+#     stringLength=2120
+#     test_num=1
+#     for i in range(test_num):
+#         rand_str = ''.join(choices(letters, k=stringLength))
+#         # print(str(len(rand_str)) + ' uncompressed size')
+#         codeword_bin = encode(rand_str, 6,4)
+#         writefile_bin(codeword_bin)
+#         read_bin = readfile_bin()
+#         assert decode(read_bin) == rand_str
 
 
-def to_bin(str_data):
-    # pad a 1 at the front
-    str_data = '1' + str_data
-    int_data = int(str_data, 2)
-    data_bin = int_data.to_bytes(math.ceil(int_data.bit_length()/8), BYTEORDER)
-    # print(str(math.ceil(int_data.bit_length()/8))+' bytes allocated')
-    return data_bin
+def binstr_to_bytearray(data):
+    int_array = []
+    for i in range(0, len(data), 8):
+        next_byte = data[i:i+8]
+        next_byte = int(next_byte, 2)
+
+        int_array.append(next_byte)
+    return bytearray(int_array)
 
 
-def from_bin(byte_data):
-    int_data = int.from_bytes(byte_data, BYTEORDER)
-    str_data = bin(int_data)[2:]
-    str_data = str_data[1:]
+def bytearray_to_binstr(data):
+    result_binstr = ''.join(
+        list(map(lambda x: (8-len(bin(x)[2:]))*'0'+bin(x)[2:], data[:-1])))
 
-    return str_data
+    last_byte = bin(data[-1])[2:]
 
-
-def readfile_bin(filepath=OUTPUT_FILE):
-    with open(filepath, 'rb') as f:
-        data_bytes = f.read()
-    print(len(data_bytes))
-    return from_bin(data_bytes)
+    result_binstr += last_byte
+    return result_binstr
 
 
-def test_all():
-    from random import choices
-    import string
-    letters = string.printable
-    stringLength = 2120
-    test_num = 1
-    for i in range(test_num):
-        rand_str = ''.join(choices(letters, k=stringLength))
-        print(str(len(rand_str)) + ' uncompressed size')
-        codeword_bin = encode(rand_str, 6, 4)
-        writefile_bin(codeword_bin)
-        read_bin = readfile_bin()
-        assert decode(read_bin) == rand_str
 
+def readfile_bin(filepath):
+    with open(filepath, 'rb') as fin:
+        read_code = fin.read()
+        read_codeword_binstr = bytearray_to_binstr(read_code)
+    return read_codeword_binstr
+
+def writefile_txt(data, output_path='./output_lzss_decoder.txt'):
+    with open(output_path, 'w') as fout:
+        fout.write(data)
 
 if __name__ == "__main__":
     input_filepath = sys.argv[1]
-    window_size = int(sys.argv[2])
-    buffer_size = int(sys.argv[3])
-    filetext = readfile_txt(filepath=input_filepath)
-    codeword_bin = encode(filetext, window_size, buffer_size)
-    writefile_bin(codeword_bin)
-    read_bin = readfile_bin()
-    decoded = decode(read_bin)
-
-    # test_all()
+    filetext = readfile_bin(filepath=input_filepath)
+    read_codeword_binstr = readfile_bin(input_filepath)
+    decoded = decode(read_codeword_binstr)
+    
