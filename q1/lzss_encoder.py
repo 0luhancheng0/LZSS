@@ -398,9 +398,7 @@ if __name__ == "__main__":
                           write_to_file_path=input_filepath)
 
     writefile_bin(codeword_binstr)
-
-    # read_codeword_binstr = readfile_bin(OUTPUT_FILE)
-    # decoded = decode(read_codeword_binstr)
+    
 
 
 

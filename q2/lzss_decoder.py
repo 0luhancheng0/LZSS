@@ -256,7 +256,7 @@ class LZSS:
         huffman_decoder = huffman(huffman_encode_dict)
         tuple_list = []
         rest = codeword
-        while field_num != 0:
+        while field_num > 0:
             fst_bit = int(rest[0])
             rest = rest[1:]
             if fst_bit == 1:
@@ -328,42 +328,9 @@ def decode_info(codeword, huffman_encode_dict):
 
 def decode(codeword):
     huffman_encode_dict, codeword_info = decode_header(codeword)
+    print(huffman_encode_dict)
     plaintext = decode_info(codeword_info, huffman_encode_dict)
     return plaintext
-
-
-def test_LZSS(stringLength=1000, window_size_range=range(1, 10), buffer_size_range=range(1, 10), test_num=10):
-    test_elias()
-    test_huffman()
-    from random import choices
-    import string
-    letters = string.ascii_letters
-
-    for i in range(test_num):
-        rand_str = ''.join(choices(letters, k=stringLength))
-        for window_size in window_size_range:
-            for buffer_size in buffer_size_range:
-                codeword = encode(rand_str, window_size, buffer_size)
-                plaintext = decode(codeword)
-
-        assert plaintext == rand_str
-
-
-
-
-# def test_all():
-#     from random import choices
-#     import string
-#     letters = string.printable
-#     stringLength=2120
-#     test_num=1
-#     for i in range(test_num):
-#         rand_str = ''.join(choices(letters, k=stringLength))
-#         # print(str(len(rand_str)) + ' uncompressed size')
-#         codeword_bin = encode(rand_str, 6,4)
-#         writefile_bin(codeword_bin)
-#         read_bin = readfile_bin()
-#         assert decode(read_bin) == rand_str
 
 
 def binstr_to_bytearray(data):
@@ -401,5 +368,7 @@ if __name__ == "__main__":
     input_filepath = sys.argv[1]
     filetext = readfile_bin(filepath=input_filepath)
     read_codeword_binstr = readfile_bin(input_filepath)
-    decoded = decode(read_codeword_binstr)
+    decoded_text = decode(read_codeword_binstr)
+    with open('output_lzss_decoder.txt', 'w') as fout:
+        fout.write(decoded_text)
     
